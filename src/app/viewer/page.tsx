@@ -11,6 +11,125 @@ interface User {
   displayName: string;
 }
 
+// Helper function to capitalize first letter of each word
+const capitalize = (str: string): string => {
+  if (!str) return '';
+  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+};
+
+// The same improved name extraction logic as in [userId]/page.tsx
+const extractUserNameFromEmailOrId = (userId: string): string => {
+  // Define static mapping for known user IDs
+  const knownUserMap: Record<string, string> = {
+    // Example format: "start of UUID": "Display Name"
+    "3192006b": "Kamil Daaboul",
+    "a9b86c4d": "George Elias",
+    "58f3d27e": "Camilio Daaboul",
+    "c5e2f810": "Elie Mina"
+  };
+  
+  // First check if we have a direct mapping for this user ID
+  const shortId = userId.substring(0, 8).toLowerCase();
+  
+  if (knownUserMap[shortId]) {
+    return knownUserMap[shortId];
+  }
+  
+  // Try to match the userId with one of the admin emails
+  const matchedAdmin = ALLOWED_ADMINS.find(email => {
+    const emailLower = email.toLowerCase();
+    const emailUsername = emailLower.split('@')[0];
+    
+    // Try various matching strategies
+    return (
+      emailLower.includes(shortId) || 
+      shortId.includes(emailUsername.substring(0, Math.min(8, emailUsername.length)).toLowerCase())
+    );
+  });
+  
+  if (matchedAdmin) {    
+    // Extract the name part from the email
+    const emailParts = matchedAdmin.split('@')[0];
+    
+    // Handle different email naming conventions
+    if (emailParts.includes('.')) {
+      // Format: first.last@domain.com
+      const [firstName, lastName] = emailParts.split('.');
+      return `${capitalize(firstName)} ${capitalize(lastName)}`;
+    } else if (emailParts.includes('_')) {
+      // Format: first_last@domain.com
+      const nameParts = emailParts.split('_');
+      return nameParts.map(capitalize).join(' ');
+    } else {
+      // Try to detect name patterns in the email
+      // Check specific email patterns for known admins
+      if (emailParts.toLowerCase().includes('kamil')) {
+        return 'Kamil Daaboul';
+      } else if (emailParts.toLowerCase().includes('camilio')) {
+        return 'Camilio Daaboul';
+      } else if (emailParts.toLowerCase().includes('george') || emailParts.toLowerCase().includes('elias')) {
+        return 'George Elias';
+      } else if (emailParts.toLowerCase().includes('elie') || emailParts.toLowerCase().includes('mina')) {
+        return 'Elie Mina';
+      }
+      
+      // Look for common patterns like lowercase/uppercase transitions
+      let formattedName = '';
+      
+      // Check if it might be a compound name like "johndoe" or "kabildaaboul"
+      if (/^[a-z]+$/.test(emailParts)) {
+        // First try with common last names
+        const knownLastNames = ['daaboul', 'elias', 'mina'];
+        for (const lastName of knownLastNames) {
+          if (emailParts.endsWith(lastName)) {
+            const firstName = emailParts.substring(0, emailParts.length - lastName.length);
+            formattedName = `${capitalize(firstName)} ${capitalize(lastName)}`;
+            break;
+          }
+        }
+        
+        // If we couldn't match a known last name, try some heuristics
+        if (!formattedName) {
+          // Assume the last 5-7 characters might be the last name
+          const possibleLastNameLength = Math.min(emailParts.length - 3, 7);
+          if (possibleLastNameLength > 0) {
+            const firstName = emailParts.substring(0, emailParts.length - possibleLastNameLength);
+            const lastName = emailParts.substring(emailParts.length - possibleLastNameLength);
+            formattedName = `${capitalize(firstName)} ${capitalize(lastName)}`;
+          } else {
+            // Just capitalize the whole thing if it's short
+            formattedName = capitalize(emailParts);
+          }
+        }
+      } else {
+        // Just use the default title case conversion
+        formattedName = emailParts
+          .split(/(?=[A-Z])/)
+          .map(capitalize)
+          .join(' ');
+      }
+      
+      return formattedName;
+    }
+  } else {
+    // Fallback: check if the user ID contains any name hints
+    const userId_lower = userId.toLowerCase();
+    
+    if (userId_lower.includes('kamil') || userId_lower.includes('daaboul')) {
+      return 'Kamil Daaboul';
+    } else if (userId_lower.includes('george') || userId_lower.includes('elias')) {
+      return 'George Elias';
+    } else if (userId_lower.includes('camilio')) {
+      return 'Camilio Daaboul';
+    } else if (userId_lower.includes('elie') || userId_lower.includes('mina')) {
+      return 'Elie Mina';
+    }
+    
+    // Final fallback to just showing the user ID
+    return `Admin ${shortId}`;
+  }
+};
+
 export default function ViewerPage() {
   const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
@@ -25,28 +144,11 @@ export default function ViewerPage() {
       setIsLoading(true);
       const userIds = await getUniqueUserIds();
 
-      // Create display names based on IDs
+      // Create display names based on IDs using the improved extraction logic
       const formattedUsers = userIds.map(id => {
-        // Try to match userId to an admin email
-        const shortId = id.substring(0, 8).toLowerCase();
-        const matchedAdmin = ALLOWED_ADMINS.find(email => 
-          email.toLowerCase().includes(shortId) || shortId.includes(email.substring(0, 8).toLowerCase())
-        );
-        
-        let displayName = `Admin ${id.substring(0, 8)}`;
-        
-        if (matchedAdmin) {
-          const emailPrefix = matchedAdmin.split('@')[0];
-          // Convert to Title Case
-          displayName = emailPrefix
-            .split(/[._-]/)
-            .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
-            .join(' ');
-        }
-        
         return {
           id,
-          displayName
+          displayName: extractUserNameFromEmailOrId(id)
         };
       });
 

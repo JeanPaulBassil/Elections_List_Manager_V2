@@ -29,7 +29,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" data-theme="light" className={`${inter.variable} ${poppins.variable}`}>
-      <body className="min-h-screen bg-white">
+      <body suppressHydrationWarning className="min-h-screen bg-white">
         <AuthProvider>
           {children}
         </AuthProvider>
