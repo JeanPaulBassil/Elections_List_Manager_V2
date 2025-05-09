@@ -2,14 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { getUniqueUserIds } from '@/lib/database';
+import Link from 'next/link';
 import { ALLOWED_ADMINS } from '@/lib/constants';
 
 interface User {
   id: string;
   displayName: string;
-  email?: string;
 }
 
 export default function ViewerPage() {
@@ -22,22 +21,19 @@ export default function ViewerPage() {
   }, []);
 
   const fetchUsers = async () => {
-    setIsLoading(true);
     try {
+      setIsLoading(true);
       const userIds = await getUniqueUserIds();
-      
-      // Map user IDs to display names
-      // In a real app, you'd fetch user names from a table in your database
-      const usersWithDisplayNames = userIds.map(id => {
-        // For display purposes, match the first 8 chars of ID to an admin email if possible
+
+      // Create display names based on IDs
+      const formattedUsers = userIds.map(id => {
+        // Try to match userId to an admin email
         const shortId = id.substring(0, 8).toLowerCase();
         const matchedAdmin = ALLOWED_ADMINS.find(email => 
           email.toLowerCase().includes(shortId) || shortId.includes(email.substring(0, 8).toLowerCase())
         );
         
-        // Create a display name from the email prefix or just use Admin + shortId
-        let displayName = `Admin ${shortId}`;
-        let email;
+        let displayName = `Admin ${id.substring(0, 8)}`;
         
         if (matchedAdmin) {
           const emailPrefix = matchedAdmin.split('@')[0];
@@ -46,17 +42,15 @@ export default function ViewerPage() {
             .split(/[._-]/)
             .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
             .join(' ');
-          email = matchedAdmin;
         }
         
         return {
           id,
-          displayName,
-          email
+          displayName
         };
       });
-      
-      setUsers(usersWithDisplayNames);
+
+      setUsers(formattedUsers);
     } catch (error) {
       console.error('Error fetching users:', error);
     } finally {
@@ -64,62 +58,65 @@ export default function ViewerPage() {
     }
   };
 
-  if (isLoading) {
-    return <div className="flex min-h-screen items-center justify-center">Loading...</div>;
-  }
+  const handleSelectUser = (userId: string) => {
+    router.push(`/viewer/${userId}`);
+  };
 
   return (
-    <div className="min-h-screen p-3 sm:p-4 lg:p-6 bg-gray-50">
+    <div className="min-h-screen bg-base-200 p-4 sm:p-6 sm:p-8">
       <div className="max-w-4xl mx-auto">
-        <header className="bg-white p-4 sm:p-6 rounded-lg shadow-md mb-6 sm:mb-8 text-center">
-          <h1 className="text-2xl sm:text-3xl font-bold mb-2">Election Results Viewer</h1>
-          <p className="text-gray-600 text-sm sm:text-base">Select an administrator to view their election results and statistics</p>
-        </header>
-        
-        <div className="mb-6 sm:mb-8">
-          <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Available Administrators</h2>
-          
-          {users.length === 0 ? (
-            <div className="bg-white rounded-lg shadow-md p-6 sm:p-8 text-center">
-              <p className="text-gray-500 mb-4 text-sm sm:text-base">No administrators have submitted selections yet.</p>
-              <Link href="/" className="text-blue-600 hover:underline text-sm sm:text-base">
-                Return to Home
-              </Link>
+        <div className="card bg-base-100 shadow-xl">
+          <div className="card-body">
+            <h1 className="card-title text-3xl mb-6 justify-center">Election Results Viewer</h1>
+            
+            <div className="text-center mb-8">
+              <p className="text-lg mb-4">
+                Select an administrator to view their candidate selections and statistics
+              </p>
+              <div className="badge badge-primary badge-lg">Public View Only</div>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-              {users.map((user) => (
-                <Link
-                  key={user.id}
-                  href={`/viewer/${user.id}`}
-                  className="bg-white rounded-lg shadow-md hover:shadow-lg transition p-3 sm:p-4 block"
-                >
-                  <div className="font-bold text-base sm:text-lg text-blue-700">{user.displayName}</div>
-                  {user.email && (
-                    <div className="text-xs sm:text-sm text-gray-500 mt-1 truncate">{user.email}</div>
-                  )}
-                  <div className="mt-3 sm:mt-4 text-xs sm:text-sm text-blue-600">View Selection Results →</div>
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
-        
-        <div className="bg-blue-50 border-l-4 border-blue-500 p-3 sm:p-4 rounded-md">
-          <h3 className="text-base sm:text-lg font-semibold text-blue-700 mb-2">About This Section</h3>
-          <p className="text-blue-700 text-sm sm:text-base">
-            This public viewer allows anyone to see the selection results and statistics for each administrator.
-            No login is required. Click on an administrator's card to view their detailed results.
-          </p>
-        </div>
-        
-        <div className="mt-6 sm:mt-8 text-center">
-          <Link
-            href="/"
-            className="px-3 sm:px-4 py-2 text-sm sm:text-base bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition inline-block"
-          >
-            Return to Home
-          </Link>
+            
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center py-12">
+                <span className="loading loading-spinner loading-lg text-primary"></span>
+                <p className="mt-4 text-base-content/70">Loading administrators...</p>
+              </div>
+            ) : (
+              <>
+                {users.length === 0 ? (
+                  <div className="alert alert-info">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="stroke-current shrink-0 w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <span>No administrators have made selections yet.</span>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 sm:grid-cols-3 gap-4">
+                    {users.map((user) => (
+                      <button
+                        key={user.id}
+                        onClick={() => handleSelectUser(user.id)}
+                        className="btn btn-outline hover:btn-primary h-auto py-6 flex flex-col items-center justify-center gap-2"
+                      >
+                        <div className="avatar placeholder">
+                          <div className="bg-neutral text-neutral-content rounded-full w-12">
+                            <span className="text-xl">{user.displayName.charAt(0)}</span>
+                          </div>
+                        </div>
+                        <span className="text-lg">{user.displayName}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                
+                <div className="divider my-8">Options</div>
+                
+                <div className="flex justify-center">
+                  <Link href="/" className="btn btn-secondary">
+                    Return to Home
+                  </Link>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>

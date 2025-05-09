@@ -65,62 +65,72 @@ export default function AdminLoginPage() {
   };
 
   if (isLoading) {
-    return <div className="flex min-h-screen items-center justify-center">Loading...</div>;
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <span className="loading loading-spinner loading-lg text-primary"></span>
+      </div>
+    );
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center p-4 sm:p-6 bg-gray-50">
-      <div className="w-full max-w-md p-6 sm:p-8 bg-white rounded-lg shadow-md">
-        <h1 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6 text-center">Admin Login</h1>
-        
-        {error && (
-          <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md text-sm sm:text-base">
-            {error}
-          </div>
-        )}
-        
-        <form onSubmit={handleLogin} className="space-y-4">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-              Email Address
-            </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-              autoComplete="email"
-            />
-          </div>
+    <div className="min-h-screen flex items-center justify-center px-4">
+      <div className="card w-full max-w-md bg-base-100 shadow-xl">
+        <div className="card-body">
+          <h1 className="card-title text-3xl font-bold text-center self-center mb-6">Admin Login</h1>
           
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-              autoComplete="current-password"
-            />
-          </div>
+          {error && (
+            <div className="alert alert-error mb-6">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 shrink-0 stroke-current" fill="none" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              <span>{error}</span>
+            </div>
+          )}
           
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition disabled:opacity-50 h-10 sm:h-11"
-          >
-            {isSubmitting ? 'Logging in...' : 'Log In'}
-          </button>
-        </form>
-        
-        <div className="mt-6 text-center">
-          <Link href="/" className="text-blue-600 hover:underline text-sm sm:text-base">
+          <form onSubmit={handleLogin} className="space-y-6">
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">Email Address</span>
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="input input-bordered w-full"
+                required
+                autoComplete="email"
+              />
+            </div>
+            
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">Password</span>
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="input input-bordered w-full"
+                required
+                autoComplete="current-password"
+              />
+            </div>
+            
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="btn btn-primary w-full"
+            >
+              {isSubmitting ? (
+                <>
+                  <span className="loading loading-spinner loading-sm"></span>
+                  Logging in...
+                </>
+              ) : 'Log In'}
+            </button>
+          </form>
+          
+          <div className="divider mt-6">OR</div>
+          
+          <Link href="/" className="btn btn-outline btn-sm btn-block">
             Return to Home
           </Link>
         </div>

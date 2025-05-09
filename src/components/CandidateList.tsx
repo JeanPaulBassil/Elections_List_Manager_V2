@@ -1,5 +1,7 @@
 'use client';
 
+import React from 'react';
+
 interface CandidateListProps {
   title: string;
   listName: 'List A' | 'List B';
@@ -9,61 +11,78 @@ interface CandidateListProps {
   maxSelections: number;
 }
 
-export default function CandidateList({ 
-  title, 
+export default function CandidateList({
+  title,
   listName,
-  candidates, 
-  selectedCandidates, 
+  candidates,
+  selectedCandidates,
   onSelectCandidate,
-  maxSelections
+  maxSelections,
 }: CandidateListProps) {
-  const totalSelected = selectedCandidates.length;
-  const isMaxReached = totalSelected >= maxSelections;
-  
+  if (!candidates || candidates.length === 0) {
+    return (
+      <div className="card bg-white shadow-md h-full border border-gray-200">
+        <div className="card-body">
+          <h2 className="card-title text-black">{title}</h2>
+          <div className="alert bg-yellow-50 text-yellow-800 border border-yellow-200">No candidates available</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="bg-white rounded-lg shadow-md p-3 sm:p-4">
-      <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">{title}</h2>
-      
-      {candidates.length === 0 ? (
-        <p className="text-gray-500 text-sm sm:text-base">No candidates available</p>
-      ) : (
-        <ul className="space-y-2">
-          {candidates.map((name) => {
-            const isSelected = selectedCandidates.some(
-              c => c.name === name && c.list_name === listName
-            );
-            const selectedCandidate = selectedCandidates.find(
-              c => c.name === name && c.list_name === listName
-            );
-            const position = selectedCandidate?.selection_order;
-            
-            return (
-              <li key={name} className="flex items-center">
-                <button
-                  onClick={() => onSelectCandidate(name, listName)}
-                  disabled={!isSelected && isMaxReached}
-                  className={`flex-1 flex items-center justify-between p-2 sm:p-3 rounded-md transition text-sm sm:text-base ${
-                    isSelected 
-                      ? 'bg-blue-100 hover:bg-blue-200' 
-                      : isMaxReached 
-                        ? 'bg-gray-100 cursor-not-allowed opacity-60' 
-                        : 'hover:bg-gray-100'
-                  }`}
-                  title={!isSelected && isMaxReached ? `Maximum of ${maxSelections} candidates already selected` : ''}
-                  aria-label={`${isSelected ? 'Deselect' : 'Select'} ${name}`}
-                >
-                  <span className="truncate pr-2">{name}</span>
-                  {isSelected && position && (
-                    <span className="inline-flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 bg-blue-600 text-white rounded-full text-xs sm:text-sm font-medium flex-shrink-0">
-                      {position}
-                    </span>
-                  )}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+    <div className="card bg-white shadow-md h-full border border-gray-200">
+      <div className="card-body">
+        <h2 className="card-title text-black">{title}</h2>
+        <div className="overflow-x-auto">
+          <table className="table w-full">
+            <thead>
+              <tr className="bg-gray-50">
+                <th className="text-black">Name</th>
+                <th className="w-24 text-center text-black">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {candidates.map((name) => {
+                const isSelected = selectedCandidates.some(
+                  (c) => c.name === name && c.list_name === listName
+                );
+                const selectionOrder = isSelected
+                  ? selectedCandidates.find(
+                      (c) => c.name === name && c.list_name === listName
+                    )?.selection_order
+                  : undefined;
+
+                return (
+                  <tr key={name} className={isSelected ? 'bg-blue-50' : ''}>
+                    <td className="flex items-center gap-2">
+                      {isSelected && (
+                        <div className="badge bg-blue-500 text-white">{selectionOrder}</div>
+                      )}
+                      <span className={isSelected ? 'font-medium text-black' : 'text-black'}>{name}</span>
+                    </td>
+                    <td className="text-center">
+                      <button
+                        onClick={() => onSelectCandidate(name, listName)}
+                        className={`btn btn-sm ${
+                          isSelected
+                            ? 'bg-red-500 hover:bg-red-600 text-white'
+                            : selectedCandidates.length >= maxSelections
+                            ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                            : 'bg-blue-500 hover:bg-blue-600 text-white'
+                        }`}
+                        disabled={!isSelected && selectedCandidates.length >= maxSelections}
+                      >
+                        {isSelected ? 'Remove' : 'Select'}
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 } 

@@ -1,23 +1,34 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { CandidateWithStats } from '@/types';
 import Link from 'next/link';
-import { getUserSelections, getCandidateStats, getUserSelectionHistory } from '@/lib/database';
-import { listA, listB } from '@/lib/candidates';
+import { getUserSelectionHistory, getCandidateStats } from '@/lib/database';
 import { ALLOWED_ADMINS } from '@/lib/constants';
+
+interface SelectionSession {
+  groupId: string;
+  timestamp: string;
+  selectionCount: number;
+  selections: {
+    id: string;
+    candidate_name: string;
+    list_name: string;
+    selection_order: number;
+  }[];
+}
 
 export default function ViewerDetailPage({ params }: { params: { userId: string } }) {
   const router = useRouter();
-  const { userId } = params;
+  const unwrappedParams = React.use(params as any);
+  const userId = unwrappedParams.userId;
   const [listACandidates, setListACandidates] = useState<CandidateWithStats[]>([]);
   const [listBCandidates, setListBCandidates] = useState<CandidateWithStats[]>([]);
-  const [selectedCandidates, setSelectedCandidates] = useState<{ name: string; list_name: string; selection_order: number }[]>([]);
-  const [mostRecentSession, setMostRecentSession] = useState<{ timestamp: string, selections: any[] } | null>(null);
-  const [totalSelections, setTotalSelections] = useState(0);
+  const [selectionHistory, setSelectionHistory] = useState<SelectionSession[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [userName, setUserName] = useState('');
+  const [expandedHistory, setExpandedHistory] = useState<string[]>([]);
 
   useEffect(() => {
     if (userId) {
@@ -44,38 +55,22 @@ export default function ViewerDetailPage({ params }: { params: { userId: string 
   }, [userId]);
 
   const fetchData = async () => {
-    setIsLoading(true);
     try {
-      // Get candidate statistics
-      const stats = await getCandidateStats(userId);
+      setIsLoading(true);
       
-      // Split stats by list
-      const listAStats = stats.filter(c => c.list_name === 'List A');
-      const listBStats = stats.filter(c => c.list_name === 'List B');
+      // Fetch user selection history
+      const history = await getUserSelectionHistory(userId);
+      setSelectionHistory(history);
+      
+      // Fetch candidate stats (counts for both lists)
+      const candidateStats = await getCandidateStats(userId);
+      
+      // Split by list
+      const listAStats = candidateStats.filter(c => c.list_name === 'List A');
+      const listBStats = candidateStats.filter(c => c.list_name === 'List B');
       
       setListACandidates(listAStats);
       setListBCandidates(listBStats);
-      
-      // Calculate total selections
-      const total = stats.reduce((sum, candidate) => sum + candidate.selection_count, 0);
-      setTotalSelections(total);
-      
-      // Get selection history
-      const history = await getUserSelectionHistory(userId);
-      
-      if (history.length > 0) {
-        // Get most recent session
-        setMostRecentSession(history[0]);
-        
-        // Set current selection
-        const orderedSelections = history[0].selections.map(selection => ({
-          name: selection.candidate_name,
-          list_name: selection.list_name,
-          selection_order: selection.selection_order
-        }));
-        
-        setSelectedCandidates(orderedSelections);
-      }
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -93,208 +88,195 @@ export default function ViewerDetailPage({ params }: { params: { userId: string 
       minute: '2-digit',
     }).format(date);
   };
+  
+  const toggleHistoryExpand = (groupId: string) => {
+    setExpandedHistory(prevExpanded => 
+      prevExpanded.includes(groupId)
+        ? prevExpanded.filter(id => id !== groupId)
+        : [...prevExpanded, groupId]
+    );
+  };
 
   if (isLoading) {
-    return <div className="flex min-h-screen items-center justify-center">Loading...</div>;
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <span className="loading loading-spinner loading-lg text-primary"></span>
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen p-3 sm:p-4 lg:p-6 bg-gray-50">
+    <div className="min-h-screen bg-base-200 p-4">
       <div className="max-w-6xl mx-auto">
-        <div className="bg-white p-4 sm:p-6 rounded-lg shadow-md mb-6 sm:mb-8">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold mb-1">{userName}'s Statistics</h1>
-              <p className="text-gray-600 text-sm sm:text-base">Viewing election results and statistics</p>
-            </div>
-            <Link 
-              href="/viewer"
-              className="px-3 sm:px-4 py-2 text-sm sm:text-base bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
-            >
-              Back to Admins
-            </Link>
-          </div>
-        </div>
-        
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
-          <div className="bg-white rounded-lg shadow-md p-3 sm:p-6 text-center col-span-2 sm:col-span-1">
-            <div className="text-gray-500 text-xs sm:text-sm uppercase font-semibold">Total Selections</div>
-            <div className="text-2xl sm:text-4xl font-bold text-blue-600 my-1 sm:my-2">{totalSelections}</div>
-            <div className="text-xs sm:text-sm text-gray-500">across all candidates</div>
-          </div>
-          
-          <div className="bg-white rounded-lg shadow-md p-3 sm:p-6 text-center col-span-2 sm:col-span-1">
-            <div className="text-gray-500 text-xs sm:text-sm uppercase font-semibold">Active Lists</div>
-            <div className="text-2xl sm:text-4xl font-bold text-blue-600 my-1 sm:my-2">2</div>
-            <div className="text-xs sm:text-sm text-gray-500">List A and List B</div>
-          </div>
-          
-          <div className="bg-white rounded-lg shadow-md p-3 sm:p-6 text-center">
-            <div className="text-gray-500 text-xs sm:text-sm uppercase font-semibold">List A Candidates</div>
-            <div className="text-2xl sm:text-4xl font-bold text-blue-600 my-1 sm:my-2">{listA.length}</div>
-            <div className="text-xs sm:text-sm text-gray-500">available candidates</div>
-          </div>
-          
-          <div className="bg-white rounded-lg shadow-md p-3 sm:p-6 text-center">
-            <div className="text-gray-500 text-xs sm:text-sm uppercase font-semibold">List B Candidates</div>
-            <div className="text-2xl sm:text-4xl font-bold text-blue-600 my-1 sm:my-2">{listB.length}</div>
-            <div className="text-xs sm:text-sm text-gray-500">available candidates</div>
-          </div>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 mb-6 sm:mb-8">
-          <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
-            <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Most Recent Selections</h2>
-            {selectedCandidates.length === 0 ? (
-              <p className="text-gray-500 text-sm sm:text-base">No candidates selected</p>
-            ) : (
+        <div className="card bg-base-100 shadow-xl mb-8">
+          <div className="card-body">
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
               <div>
-                {mostRecentSession && (
-                  <div className="mb-3 sm:mb-4 text-gray-500 text-xs sm:text-sm">
-                    <span className="font-medium">Last updated:</span> {formatDate(mostRecentSession.timestamp)}
+                <h1 className="text-3xl font-bold flex items-center gap-3">
+                  <div className="avatar placeholder">
+                    <div className="bg-primary text-primary-content rounded-full w-12">
+                      <span>{userName.charAt(0)}</span>
+                    </div>
                   </div>
-                )}
-                <div className="divide-y divide-gray-200 overflow-x-auto">
-                  <div className="min-w-[300px]">
-                    {selectedCandidates.map((candidate, index) => (
-                      <div 
-                        key={`${candidate.name}-${candidate.selection_order}`} 
-                        className="py-2 sm:py-3 flex items-center"
-                      >
-                        <div className="w-6 h-6 sm:w-8 sm:h-8 flex-shrink-0 bg-blue-600 text-white rounded-full flex items-center justify-center font-medium mr-2 sm:mr-3 text-xs sm:text-sm">
-                          {candidate.selection_order}
+                  <span>{userName}'s Results</span>
+                </h1>
+                <p className="text-base-content/70 mt-2">
+                  Viewing selections and statistics for this administrator
+                </p>
+              </div>
+              
+              <div className="flex flex-wrap gap-2">
+                <Link href="/viewer" className="btn btn-outline btn-sm">
+                  Back to Administrators
+                </Link>
+                <Link href="/" className="btn btn-secondary btn-sm">
+                  Home
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Selection History Section */}
+        <div className="card bg-base-100 shadow-xl mb-8">
+          <div className="card-body">
+            <h2 className="card-title text-2xl mb-4">Selection History</h2>
+            
+            {selectionHistory.length === 0 ? (
+              <div className="alert alert-warning">
+                <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                <div>
+                  <h3 className="font-bold">No Selections</h3>
+                  <div className="text-sm">This administrator has not made any candidate selections yet.</div>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {selectionHistory.map((session) => (
+                  <div 
+                    key={session.groupId} 
+                    className="border border-base-300 rounded-lg hover:shadow-md transition"
+                  >
+                    <div 
+                      className="p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 cursor-pointer"
+                      onClick={() => toggleHistoryExpand(session.groupId)}
+                    >
+                      <div className="flex items-center">
+                        <div className={`transform transition-transform ${expandedHistory.includes(session.groupId) ? 'rotate-90' : ''}`}>
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-base-content/60" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                          </svg>
                         </div>
                         <div>
-                          <div className="font-medium text-sm sm:text-base">{candidate.name}</div>
-                          <div className="text-xs sm:text-sm">
-                            <span className={`px-2 py-0.5 sm:py-1 rounded-full text-xs ${
-                              candidate.list_name === 'List A' 
-                                ? 'bg-blue-100 text-blue-800' 
-                                : 'bg-purple-100 text-purple-800'
-                            }`}>
-                              {candidate.list_name}
-                            </span>
-                          </div>
+                          <div className="font-medium">Selection from {formatDate(session.timestamp)}</div>
+                          <div className="text-sm text-base-content/60">{session.selectionCount} candidates selected</div>
                         </div>
                       </div>
-                    ))}
+                      <div className="badge badge-primary badge-lg">{session.selectionCount}</div>
+                    </div>
+                    
+                    {expandedHistory.includes(session.groupId) && (
+                      <div className="p-4 border-t border-base-300 bg-base-200">
+                        <div className="overflow-x-auto">
+                          <table className="table table-zebra w-full">
+                            <thead>
+                              <tr>
+                                <th>Order</th>
+                                <th>Candidate</th>
+                                <th>List</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {session.selections.map((selection) => (
+                                <tr key={selection.id}>
+                                  <td className="w-16">
+                                    <div className="badge badge-primary badge-lg">{selection.selection_order}</div>
+                                  </td>
+                                  <td className="font-medium">{selection.candidate_name}</td>
+                                  <td>
+                                    <span className={`badge ${
+                                      selection.list_name === 'List A' 
+                                        ? 'badge-info' 
+                                        : 'badge-secondary'
+                                    }`}>
+                                      {selection.list_name}
+                                    </span>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </div>
+                ))}
               </div>
             )}
           </div>
-          
-          <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
-            <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Combined Candidate Rankings</h2>
-            <div className="overflow-x-auto">
-              <table className="min-w-full">
-                <thead>
-                  <tr className="bg-gray-50">
-                    <th className="px-2 sm:px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rank</th>
-                    <th className="px-2 sm:px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                    <th className="px-2 sm:px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">List</th>
-                    <th className="px-2 sm:px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Count</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {[...listACandidates, ...listBCandidates]
-                    .sort((a, b) => b.selection_count - a.selection_count)
-                    .filter(candidate => candidate.selection_count > 0)
-                    .slice(0, 10)
-                    .map((candidate, index) => (
-                      <tr key={`${candidate.name}-${candidate.list_name}`} className="hover:bg-gray-50">
-                        <td className="px-2 sm:px-4 py-2 whitespace-nowrap text-xs sm:text-sm font-medium">
-                          #{index + 1}
-                        </td>
-                        <td className="px-2 sm:px-4 py-2 whitespace-nowrap text-xs sm:text-sm">{candidate.name}</td>
-                        <td className="px-2 sm:px-4 py-2 whitespace-nowrap text-xs sm:text-sm">
-                          <span className={`px-2 py-0.5 rounded-full text-xs ${
-                            candidate.list_name === 'List A' 
-                              ? 'bg-blue-100 text-blue-800' 
-                              : 'bg-purple-100 text-purple-800'
-                          }`}>
-                            {candidate.list_name}
-                          </span>
-                        </td>
-                        <td className="px-2 sm:px-4 py-2 whitespace-nowrap text-xs sm:text-sm text-right font-medium">{candidate.selection_count}</td>
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
-              
-              {[...listACandidates, ...listBCandidates].filter(c => c.selection_count > 0).length === 0 && (
-                <p className="text-gray-500 text-center py-4 text-sm">No selection data available</p>
-              )}
-            </div>
-          </div>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
-          <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
-            <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">List A Statistics</h2>
-            <div className="overflow-x-auto">
-              <table className="min-w-full">
-                <thead>
-                  <tr className="bg-gray-50">
-                    <th className="px-2 sm:px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                    <th className="px-2 sm:px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Count</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {listACandidates
-                    .sort((a, b) => b.selection_count - a.selection_count)
-                    .map((candidate) => (
-                      <tr key={candidate.name} className="hover:bg-gray-50">
-                        <td className="px-2 sm:px-4 py-2 whitespace-nowrap text-xs sm:text-sm">{candidate.name}</td>
-                        <td className="px-2 sm:px-4 py-2 whitespace-nowrap text-xs sm:text-sm text-right font-medium">
-                          {candidate.selection_count > 0 ? candidate.selection_count : '-'}
+        {/* Statistics Section - Grid with two cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+          <div className="card bg-base-100 shadow-xl">
+            <div className="card-body">
+              <h2 className="card-title text-2xl">List A Statistics</h2>
+              
+              <div className="overflow-x-auto">
+                <table className="table table-zebra">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th className="text-center">Selection Count</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {listACandidates.map((candidate) => (
+                      <tr key={candidate.name}>
+                        <td className="font-medium">{candidate.name}</td>
+                        <td className="text-center">
+                          {candidate.selection_count > 0 ? (
+                            <div className="badge badge-primary">{candidate.selection_count}</div>
+                          ) : (
+                            <span className="opacity-50">0</span>
+                          )}
                         </td>
                       </tr>
                     ))}
-                </tbody>
-                <tfoot>
-                  <tr className="border-t-2 border-gray-200 bg-gray-50">
-                    <td className="px-2 sm:px-4 py-2 text-xs sm:text-sm font-semibold">Total List A</td>
-                    <td className="px-2 sm:px-4 py-2 text-xs sm:text-sm font-bold text-right">
-                      {listACandidates.reduce((sum, c) => sum + c.selection_count, 0)}
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
           
-          <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
-            <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">List B Statistics</h2>
-            <div className="overflow-x-auto">
-              <table className="min-w-full">
-                <thead>
-                  <tr className="bg-gray-50">
-                    <th className="px-2 sm:px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                    <th className="px-2 sm:px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Count</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {listBCandidates
-                    .sort((a, b) => b.selection_count - a.selection_count)
-                    .map((candidate) => (
-                      <tr key={candidate.name} className="hover:bg-gray-50">
-                        <td className="px-2 sm:px-4 py-2 whitespace-nowrap text-xs sm:text-sm">{candidate.name}</td>
-                        <td className="px-2 sm:px-4 py-2 whitespace-nowrap text-xs sm:text-sm text-right font-medium">
-                          {candidate.selection_count > 0 ? candidate.selection_count : '-'}
+          <div className="card bg-base-100 shadow-xl">
+            <div className="card-body">
+              <h2 className="card-title text-2xl">List B Statistics</h2>
+              
+              <div className="overflow-x-auto">
+                <table className="table table-zebra">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th className="text-center">Selection Count</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {listBCandidates.map((candidate) => (
+                      <tr key={candidate.name}>
+                        <td className="font-medium">{candidate.name}</td>
+                        <td className="text-center">
+                          {candidate.selection_count > 0 ? (
+                            <div className="badge badge-primary">{candidate.selection_count}</div>
+                          ) : (
+                            <span className="opacity-50">0</span>
+                          )}
                         </td>
                       </tr>
                     ))}
-                </tbody>
-                <tfoot>
-                  <tr className="border-t-2 border-gray-200 bg-gray-50">
-                    <td className="px-2 sm:px-4 py-2 text-xs sm:text-sm font-semibold">Total List B</td>
-                    <td className="px-2 sm:px-4 py-2 text-xs sm:text-sm font-bold text-right">
-                      {listBCandidates.reduce((sum, c) => sum + c.selection_count, 0)}
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>

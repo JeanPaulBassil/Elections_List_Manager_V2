@@ -1,13 +1,25 @@
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import "./globals.css";
-import { Providers } from "./providers";
+import './globals.css';
+import type { Metadata } from 'next';
+import { Inter, Poppins } from 'next/font/google';
+import { AuthProvider } from '@/context/AuthContext';
 
-const inter = Inter({ subsets: ["latin"] });
+// Import Inter for body text and Poppins for headings
+const inter = Inter({ 
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-inter',
+});
+
+const poppins = Poppins({
+  weight: ['400', '500', '600', '700'],
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-poppins',
+});
 
 export const metadata: Metadata = {
-  title: "Election Voting System",
-  description: "A web-based election voting system using Next.js and Supabase",
+  title: 'Election Voting System',
+  description: 'A secure platform for managing election votes',
 };
 
 export default function RootLayout({
@@ -16,11 +28,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={inter.className}>
-        <Providers>
+    <html lang="en" data-theme="light" className={`${inter.variable} ${poppins.variable}`}>
+      <body className="min-h-screen bg-white">
+        <AuthProvider>
           {children}
-        </Providers>
+        </AuthProvider>
       </body>
     </html>
   );
