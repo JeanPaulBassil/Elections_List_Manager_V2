@@ -21,11 +21,11 @@ const capitalize = (str: string): string => {
 const extractUserNameFromEmailOrId = (userId: string): string => {
   // Define static mapping for known user IDs
   const knownUserMap: Record<string, string> = {
-    // Example format: "start of UUID": "Display Name"
-    "3192006b": "Kamil Daaboul",
-    "a9b86c4d": "George Elias",
-    "58f3d27e": "Camilio Daaboul",
-    "c5e2f810": "Elie Mina"
+    // Exact UUIDs for each admin
+    "88251147": "George Elias",
+    "8ae9181b": "Elie Mina",
+    "7b42b1a6": "Camilio Daaboul",
+    "3192006b": "Kamil Daaboul"
   };
   
   // First check if we have a direct mapping for this user ID

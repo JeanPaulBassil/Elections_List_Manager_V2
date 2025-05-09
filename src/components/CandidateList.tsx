@@ -52,9 +52,18 @@ export default function CandidateList({
                       (c) => c.name === name && c.list_name === listName
                     )?.selection_order
                   : undefined;
+                const isDisabled = !isSelected && selectedCandidates.length >= maxSelections;
 
                 return (
-                  <tr key={name} className={isSelected ? 'bg-blue-50' : ''}>
+                  <tr 
+                    key={name} 
+                    className={`${isSelected ? 'bg-blue-50' : ''} ${isDisabled ? 'opacity-50' : 'hover:bg-gray-50 cursor-pointer'}`}
+                    onClick={() => {
+                      if (!isDisabled) {
+                        onSelectCandidate(name, listName);
+                      }
+                    }}
+                  >
                     <td className="flex items-center gap-2">
                       {isSelected && (
                         <div className="badge bg-blue-500 text-white">{selectionOrder}</div>
@@ -63,15 +72,18 @@ export default function CandidateList({
                     </td>
                     <td className="text-center">
                       <button
-                        onClick={() => onSelectCandidate(name, listName)}
                         className={`btn btn-sm ${
                           isSelected
                             ? 'bg-red-500 hover:bg-red-600 text-white'
-                            : selectedCandidates.length >= maxSelections
+                            : isDisabled
                             ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
                             : 'bg-blue-500 hover:bg-blue-600 text-white'
                         }`}
-                        disabled={!isSelected && selectedCandidates.length >= maxSelections}
+                        disabled={isDisabled}
+                        onClick={(e) => {
+                          e.stopPropagation(); // Prevent the row click from firing
+                          onSelectCandidate(name, listName);
+                        }}
                       >
                         {isSelected ? 'Remove' : 'Select'}
                       </button>

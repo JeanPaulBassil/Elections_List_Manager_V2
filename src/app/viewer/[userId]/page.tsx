@@ -25,23 +25,19 @@ const capitalize = (str: string): string => {
 };
 
 const extractUserNameFromEmailOrId = (userId: string): string => {
-  console.log("Trying to extract name for user ID:", userId);
-  
   // Define static mapping for known user IDs
   const knownUserMap: Record<string, string> = {
-    // Example format: "start of UUID": "Display Name"
-    "3192006b": "Kamil Daaboul",
-    "a9b86c4d": "George Elias",
-    "58f3d27e": "Camilio Daaboul",
-    "c5e2f810": "Elie Mina"
+    // Exact UUIDs for each admin
+    "88251147": "George Elias",
+    "8ae9181b": "Elie Mina",
+    "7b42b1a6": "Camilio Daaboul",
+    "3192006b": "Kamil Daaboul"
   };
   
   // First check if we have a direct mapping for this user ID
   const shortId = userId.substring(0, 8).toLowerCase();
-  console.log("Short ID for matching:", shortId);
   
   if (knownUserMap[shortId]) {
-    console.log("Found direct mapping for user:", knownUserMap[shortId]);
     return knownUserMap[shortId];
   }
   
@@ -49,8 +45,6 @@ const extractUserNameFromEmailOrId = (userId: string): string => {
   const matchedAdmin = ALLOWED_ADMINS.find(email => {
     const emailLower = email.toLowerCase();
     const emailUsername = emailLower.split('@')[0];
-    
-    console.log(`Comparing with admin: ${emailLower} (username: ${emailUsername})`);
     
     // Try various matching strategies
     return (
@@ -60,8 +54,6 @@ const extractUserNameFromEmailOrId = (userId: string): string => {
   });
   
   if (matchedAdmin) {
-    console.log("Matched with admin email:", matchedAdmin);
-    
     // Extract the name part from the email
     const emailParts = matchedAdmin.split('@')[0];
     
@@ -69,15 +61,11 @@ const extractUserNameFromEmailOrId = (userId: string): string => {
     if (emailParts.includes('.')) {
       // Format: first.last@domain.com
       const [firstName, lastName] = emailParts.split('.');
-      const formattedName = `${capitalize(firstName)} ${capitalize(lastName)}`;
-      console.log("Extracted name from dot format:", formattedName);
-      return formattedName;
+      return `${capitalize(firstName)} ${capitalize(lastName)}`;
     } else if (emailParts.includes('_')) {
       // Format: first_last@domain.com
       const nameParts = emailParts.split('_');
-      const formattedName = nameParts.map(capitalize).join(' ');
-      console.log("Extracted name from underscore format:", formattedName);
-      return formattedName;
+      return nameParts.map(capitalize).join(' ');
     } else {
       // Try to detect name patterns in the email
       // Check specific email patterns for your admins
@@ -102,7 +90,6 @@ const extractUserNameFromEmailOrId = (userId: string): string => {
           if (emailParts.endsWith(lastName)) {
             const firstName = emailParts.substring(0, emailParts.length - lastName.length);
             formattedName = `${capitalize(firstName)} ${capitalize(lastName)}`;
-            console.log("Extracted name by known last name:", formattedName);
             break;
           }
         }
@@ -115,11 +102,9 @@ const extractUserNameFromEmailOrId = (userId: string): string => {
             const firstName = emailParts.substring(0, emailParts.length - possibleLastNameLength);
             const lastName = emailParts.substring(emailParts.length - possibleLastNameLength);
             formattedName = `${capitalize(firstName)} ${capitalize(lastName)}`;
-            console.log("Extracted name by heuristic:", formattedName);
           } else {
             // Just capitalize the whole thing if it's short
             formattedName = capitalize(emailParts);
-            console.log("Using capitalized email parts:", formattedName);
           }
         }
       } else {
@@ -128,7 +113,6 @@ const extractUserNameFromEmailOrId = (userId: string): string => {
           .split(/(?=[A-Z])/)
           .map(capitalize)
           .join(' ');
-        console.log("Using camelCase detection:", formattedName);
       }
       
       return formattedName;
@@ -138,21 +122,16 @@ const extractUserNameFromEmailOrId = (userId: string): string => {
     const userId_lower = userId.toLowerCase();
     
     if (userId_lower.includes('kamil') || userId_lower.includes('daaboul')) {
-      console.log("Matched name from user ID text");
       return 'Kamil Daaboul';
     } else if (userId_lower.includes('george') || userId_lower.includes('elias')) {
-      console.log("Matched name from user ID text");
       return 'George Elias';
     } else if (userId_lower.includes('camilio')) {
-      console.log("Matched name from user ID text");
       return 'Camilio Daaboul';
     } else if (userId_lower.includes('elie') || userId_lower.includes('mina')) {
-      console.log("Matched name from user ID text");
       return 'Elie Mina';
     }
     
     // Final fallback to just showing the user ID
-    console.log("No name match found, using generic format");
     return `Admin ${shortId}`;
   }
 };

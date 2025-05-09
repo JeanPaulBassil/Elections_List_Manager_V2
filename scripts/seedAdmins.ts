@@ -8,7 +8,7 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 // Admin credentials
 const adminUsers = [
     { email: 'KamilDaaboul@outlook.com', password: '@Koubba1' },
-    { email: 'CamilioDaaboul@oulook.com', password: '@Koubba2' },
+    { email: 'CamilioDaaboul@outlook.com', password: '@Koubba2' },
     { email: 'GeorgesElias@outlook.com', password: '@Koubba3' },
     { email: 'ElieMina@outlook.com', password: '@Koubba4' },
 ];

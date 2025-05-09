@@ -10,7 +10,8 @@ import {
   getAllCandidateStats, 
   findIdenticalSelectionPatterns,
   deleteUserSelections,
-  deleteAllUserSelections
+  deleteAllUserSelections,
+  getCandidateStats
 } from '@/lib/database';
 import { CandidateWithStats } from '@/types';
 
@@ -67,8 +68,8 @@ export default function AdminStatsPage() {
       const history = await getUserSelectionHistory(user.id);
       setSelectionHistory(history);
       
-      // Load candidate statistics (all saves, not just most recent)
-      const stats = await getAllCandidateStats();
+      // Load candidate statistics for this specific user (not all users)
+      const stats = await getCandidateStats(user.id);
       setCandidateStats(stats);
       
       // Load identical selection patterns
