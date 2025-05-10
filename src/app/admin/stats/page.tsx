@@ -149,6 +149,9 @@ export default function AdminStatsPage() {
 
   // Calculate total selections
   const totalSelections = candidateStats.reduce((sum, candidate) => sum + candidate.selection_count, 0);
+  
+  // Total count of saved lists
+  const totalSavedLists = selectionHistory.length;
 
   if (isLoading || isDataLoading) {
     return (
@@ -266,7 +269,10 @@ export default function AdminStatsPage() {
         {activeTab === 'history' && (
           <div className="bg-white p-4 sm:p-6 rounded-lg shadow-md mb-6 sm:mb-8">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-              <h2 className="text-xl sm:text-2xl font-bold text-black">Saved Lists History</h2>
+              <div>
+                <h2 className="text-xl sm:text-2xl font-bold text-black">Saved Lists History</h2>
+                <p className="text-gray-500 mt-1">Total Lists: <span className="font-semibold text-black">{totalSavedLists}</span></p>
+              </div>
               
               {selectionHistory.length > 0 && (
                 <button
@@ -298,8 +304,9 @@ export default function AdminStatsPage() {
                           </svg>
                         </div>
                         <div>
-                          <div className="font-medium text-black">Selection from {formatDate(session.timestamp)}</div>
+                          <div className="font-medium text-black">Selection #{selectionHistory.length - sessionIndex}</div>
                           <div className="text-sm text-gray-500">{session.selectionCount} candidates selected</div>
+                          <div className="text-xs text-gray-400">{formatDate(session.timestamp)}</div>
                         </div>
                       </div>
                       <div className="flex items-center space-x-3">
