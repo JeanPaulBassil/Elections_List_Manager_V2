@@ -1,6 +1,0 @@
-{
-  "buildCommand": "next build",
-  "ignoreCommand": "exit 0",
-  "installCommand": "npm install",
-  "framework": "nextjs"
-} 
