@@ -137,9 +137,8 @@ const extractUserNameFromEmailOrId = (userId: string): string => {
 };
 
 export default async function ViewerDetailPage({ params }: { params: { userId: string } }) {
-  // Properly await the params
-  const unwrappedParams = await params;
-  const userId = unwrappedParams.userId;
+  // Use params directly, it's not a Promise
+  const userId = params.userId;
   
   // Fetch data server-side
   const history = await getUserSelectionHistory(userId);
